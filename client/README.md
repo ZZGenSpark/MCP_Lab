@@ -8,7 +8,10 @@ Library only. The host imports `equipment_client` and opens a session. Install f
 
 ```bash
 pip install -e ".[dev]"
+pytest client/tests -q
 ```
+
+The launch command comes from `config.load_config()`. Override it with `MCPLAB_SERVER_COMMAND` and `MCPLAB_SERVER_ARGS`.
 
 ## Imports
 
