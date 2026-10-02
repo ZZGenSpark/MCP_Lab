@@ -22,3 +22,11 @@ pythonpath = [".", "server/src", "client/src", "host/src"]
 markers = [
     "live: calls a local Ollama model; excluded from CI",
 ]
+
+[tool.coverage.run]
+source = ["equipment_server", "equipment_client"]
+omit = ["*/__main__.py"]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
