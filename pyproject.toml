@@ -19,3 +19,6 @@ equipment_server = ["data/*.json"]
 
 [tool.pytest.ini_options]
 pythonpath = [".", "server/src", "client/src", "host/src"]
+markers = [
+    "live: calls a local Ollama model; excluded from CI",
+]

@@ -2,6 +2,9 @@
 .cursor/plans/
 .cursor/
 
+# Local assignment spec (wording kept for agent reference; not part of the submission repo)
+Lab. Build an MCP server that exposes a mock claims system; build an agent that uses it to draft responses and escalate ambiguous cases.md
+
 # Python
 __pycache__/
 *.py[cod]

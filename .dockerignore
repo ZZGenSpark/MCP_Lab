@@ -1,5 +1,6 @@
 .git
 .gitignore
+Lab. Build an MCP server that exposes a mock claims system; build an agent that uses it to draft responses and escalate ambiguous cases.md
 **/.DS_Store
 .cursor/
 .env
