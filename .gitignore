@@ -1,0 +1,33 @@
+# Cursor plans and local editor state
+.cursor/plans/
+.cursor/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Local secrets (config.py is committed; override via MCPLAB_* env vars)
+.env
+.env.*
+!.env.example
+
+# Runtime output
+host/traces/*.tmp
+*.log
+
+# OS / editors
+.DS_Store
+**/.DS_Store
+.idea/
+.vscode/
