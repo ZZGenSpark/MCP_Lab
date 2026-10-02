@@ -9,9 +9,7 @@ from equipment_server.loaders import Directory, Employee, EquipmentRecord
 from equipment_server.tools import check_request_eligibility
 
 TODAY = date(2026, 1, 1)
-CATALOG_HINT = (
-    "Requestable items: monitor, laptop, keyboard, mouse, dock, headset"
-)
+CATALOG_HINT = "Requestable items: monitor, laptop, keyboard, mouse, dock, headset"
 
 
 def test_eligible_when_the_cap_has_room() -> None:
@@ -98,8 +96,7 @@ def test_near_boundary_laptop_is_unclear() -> None:
                 "eligible": True,
                 "reason_code": None,
                 "rule": (
-                    "standard may hold 1 monitor; refresh 3 years; "
-                    "0 inside the window"
+                    "standard may hold 1 monitor; refresh 3 years; 0 inside the window"
                 ),
             },
         ),
@@ -112,8 +109,7 @@ def test_near_boundary_laptop_is_unclear() -> None:
                 "eligible": True,
                 "reason_code": None,
                 "rule": (
-                    "standard may hold 1 monitor; refresh 3 years; "
-                    "0 inside the window"
+                    "standard may hold 1 monitor; refresh 3 years; 0 inside the window"
                 ),
             },
         ),
