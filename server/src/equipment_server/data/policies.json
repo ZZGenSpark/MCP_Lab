@@ -1,0 +1,52 @@
+{
+  "probation_days": 90,
+  "near_boundary_fraction": 0.1,
+  "catalog": ["monitor", "laptop", "keyboard", "mouse", "dock", "headset"],
+  "hardware_failure_terms": [
+    "broken",
+    "break",
+    "fail",
+    "failed",
+    "failure",
+    "damaged",
+    "damage",
+    "dead",
+    "not working",
+    "won't turn on",
+    "will not turn on"
+  ],
+  "roles": {
+    "standard": {
+      "monitor": {"max_quantity": 1, "refresh_years": 3},
+      "laptop": {"max_quantity": 1, "refresh_years": 4},
+      "keyboard": {"max_quantity": 1, "refresh_years": 2},
+      "mouse": {"max_quantity": 1, "refresh_years": 2},
+      "dock": {"max_quantity": 1, "refresh_years": 2},
+      "headset": {"max_quantity": 1, "refresh_years": 2}
+    },
+    "manager": {
+      "monitor": {"max_quantity": 2, "refresh_years": 3},
+      "laptop": {"max_quantity": 1, "refresh_years": 2},
+      "keyboard": {"max_quantity": 1, "refresh_years": 2},
+      "mouse": {"max_quantity": 1, "refresh_years": 2},
+      "dock": {"max_quantity": 1, "refresh_years": 2},
+      "headset": {"max_quantity": 1, "refresh_years": 2}
+    },
+    "contractor": {
+      "monitor": {"max_quantity": 0, "refresh_years": null},
+      "laptop": {"max_quantity": 0, "refresh_years": null},
+      "keyboard": {"max_quantity": 1, "refresh_years": 2},
+      "mouse": {"max_quantity": 1, "refresh_years": 2},
+      "dock": {"max_quantity": 1, "refresh_years": 2},
+      "headset": {"max_quantity": 1, "refresh_years": 2}
+    },
+    "intern": {
+      "monitor": {"max_quantity": 0, "refresh_years": null},
+      "laptop": {"max_quantity": 0, "refresh_years": null},
+      "keyboard": {"max_quantity": 1, "refresh_years": 2},
+      "mouse": {"max_quantity": 1, "refresh_years": 2},
+      "dock": {"max_quantity": 1, "refresh_years": 2},
+      "headset": {"max_quantity": 1, "refresh_years": 2}
+    }
+  }
+}

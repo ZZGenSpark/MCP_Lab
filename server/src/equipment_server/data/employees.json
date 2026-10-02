@@ -1,0 +1,44 @@
+[
+  {
+    "employee_id": "E1001",
+    "role": "standard",
+    "start_date": "2020-01-15",
+    "equipment": []
+  },
+  {
+    "employee_id": "E1002",
+    "role": "contractor",
+    "start_date": "2021-06-01",
+    "equipment": []
+  },
+  {
+    "employee_id": "E1003",
+    "role": "standard",
+    "start_date": "2019-03-01",
+    "equipment": [
+      {"item": "laptop", "issued_on": "2022-02-06"}
+    ]
+  },
+  {
+    "employee_id": "E1004",
+    "role": "standard",
+    "start_date": "2025-10-04",
+    "equipment": []
+  },
+  {
+    "employee_id": "E1005",
+    "role": "contractor",
+    "start_date": "2021-06-01",
+    "equipment": [
+      {"item": "laptop", "issued_on": "2024-01-01"}
+    ]
+  },
+  {
+    "employee_id": "E1006",
+    "role": "standard",
+    "start_date": "2020-01-15",
+    "equipment": [
+      {"item": "monitor", "issued_on": "2024-06-01"}
+    ]
+  }
+]

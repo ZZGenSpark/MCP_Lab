@@ -14,5 +14,8 @@ dev = ["pytest", "pytest-cov", "ruff"]
 [tool.setuptools.packages.find]
 where = ["server/src", "client/src", "host/src"]
 
+[tool.setuptools.package-data]
+equipment_server = ["data/*.json"]
+
 [tool.pytest.ini_options]
 pythonpath = [".", "server/src", "client/src", "host/src"]
