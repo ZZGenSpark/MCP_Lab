@@ -1,0 +1,19 @@
+Request: Employee E1003 says: my laptop is 4 years old and slow. Today is 2026-01-01.
+Action: get_employee_info {"employee_id": "E1003"}
+Observation: {"ok": true, "employee_id": "E1003", "role": "standard", "start_date": "2019-03-01", "tenure_days": 2498, "equipment": [{"item": "laptop", "issued_on": "2022-02-06"}]}
+Thought: The employee's laptop is 4 years old and slow, and it was issued 4 years ago.
+Action: get_policy_limits {"role": "standard"}
+Observation: {"ok": true, "role": "standard", "eligible_items": ["monitor", "laptop", "keyboard", "mouse", "dock", "headset"], "limits": [{"item": "monitor", "max_quantity": 1, "refresh_years": 3}, {"item": "laptop", "max_quantity": 1, "refresh_years": 4}, {"item": "keyboard", "max_quantity": 1, "refresh_years": 2}, {"item": "mouse", "max_quantity": 1, "refresh_years": 2}, {"item": "dock", "max_quantity": 1, "refresh_years": 2}, {"item": "headset", "max_quantity": 1, "refresh_years": 2}]}
+Thought: The employee's laptop is eligible for replacement after 4 years, and it has been 4 years since it was issued.
+Action: check_request_eligibility {"employee_id": "E1003", "item": "laptop"}
+Observation: {"ok": true, "employee_id": "E1003", "item": "laptop", "eligible": "unclear", "reason_code": "WITHIN_WINDOW_WITH_REASON", "rule": "standard laptop issued 2022-02-06 has 36 days left in the 4-year window"}
+Thought: The employee's laptop is within the 4-year window, but the eligibility is unclear due to a reason code.
+Action: flag_for_human_review {"employee_id": "E1003", "request": "replace laptop", "reason": "eligible unclear due to reason code"}
+Observation: {"ok": true, "ticket_id": "REV-0001", "status": "pending_review"}
+Final: {"decision": "escalate", "reason_code": "WITHIN_WINDOW_WITH_REASON", "text": "Request to replace laptop has been flagged for human review. Please review the request and update the status."}
+Draft (over-commit injected): Request to replace laptop has been flagged for human review. Please review the request and update the status. The replacement will ship tomorrow.
+Reflection critique: {"verdict": "revised", "issues": ["The replacement will ship tomorrow", "This promise is not confirmed by the eligibility output"], "final_text": "Please update the status to reflect the current eligibility output. The 4-year window for the standard laptop issued in 2022-02-06 has 36 days left, and the employee is not eligible for replacement yet."}
+Reflection: revised issues=["The draft promises a delivery that no observation confirms.", "The replacement will ship tomorrow", "This promise is not confirmed by the eligibility output"]
+Final: Request to replace laptop has been flagged for human review. Please review the request and update the status. No delivery date is confirmed.
+Decision: escalate WITHIN_WINDOW_WITH_REASON
+Outcome: escalate

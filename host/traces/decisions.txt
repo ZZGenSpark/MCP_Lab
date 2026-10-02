@@ -1,0 +1,19 @@
+# Demo decisions
+
+01_approve_monitor: decision=approve reason=- ticket=- reflection=confirmed
+Approved. standard may hold 1 monitor; refresh 3 years; 0 inside the window
+
+02_deny_contractor_laptop: decision=deny reason=ROLE_NOT_ELIGIBLE ticket=- reflection=confirmed
+Contractor E1002 is not eligible to request a laptop.
+
+03_deny_unknown_employee: decision=deny reason=EMPLOYEE_NOT_FOUND ticket=- reflection=confirmed
+Employee with id E9999 does not exist.
+
+04_deny_unknown_item: decision=deny reason=UNKNOWN_ITEM ticket=- reflection=confirmed
+Denied. That item is not in the catalog. Requestable items: monitor, laptop, keyboard, mouse, dock, headset
+
+05_escalate_borderline_laptop: decision=escalate reason=WITHIN_WINDOW_WITH_REASON ticket=REV-0001 reflection=revised
+Request to replace laptop has been flagged for human review. Please review the request and update the status. No delivery date is confirmed.
+
+06_escalate_new_hire: decision=escalate reason=TENURE_UNDER_90_DAYS ticket=REV-0001 reflection=confirmed
+Escalated (TENURE_UNDER_90_DAYS) as REV-0001. tenure is 89 days, under the 90-day probation
