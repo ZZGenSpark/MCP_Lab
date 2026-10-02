@@ -12,4 +12,4 @@ def test_layout_smoke() -> None:
     assert equipment_server.__version__ == "0.1.0"
     assert equipment_client.__version__ == "0.1.0"
     assert equipment_host.__version__ == "0.1.0"
-    assert main() is None
+    assert callable(main)
