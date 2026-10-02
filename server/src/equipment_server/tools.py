@@ -14,9 +14,11 @@ from equipment_server.loaders import (
     load_employees,
     load_policies,
 )
+from equipment_server.store import FlagStore, flag_store
 from equipment_server.validation import (
     policy_roles,
     validate_employee_id,
+    validate_flag_request,
     validate_item,
     validate_role,
 )
@@ -276,6 +278,41 @@ def _issued_on(value: str | None) -> date | None:
         return date.fromisoformat(value)
     except ValueError:
         return None
+
+
+def flag_for_human_review(
+    employee_id: object,
+    request: object,
+    reason: object,
+    *,
+    directory: Directory | None = None,
+    policies: PolicyData | None = None,
+    store: FlagStore | None = None,
+) -> dict[str, Any]:
+    """Open a review ticket after the validation chain passes.
+
+    Checks run in order: employee, request text and catalog item, reason,
+    then an open duplicate. The first failure returns a tool error and
+    leaves the store unchanged. A passing request creates REV-0001 and up.
+    """
+    store = flag_store if store is None else store
+    validated = validate_flag_request(
+        employee_id,
+        request,
+        reason,
+        directory=directory,
+        policies=policies,
+        store=store,
+    )
+    if isinstance(validated, dict):
+        return validated
+    record = store.create(
+        validated.employee_id,
+        validated.item,
+        validated.request,
+        validated.reason,
+    )
+    return {"ok": True, "ticket_id": record.ticket_id, "status": "pending_review"}
 
 
 def _add_years(day: date, years: int) -> date:
