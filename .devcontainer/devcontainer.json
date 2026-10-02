@@ -1,0 +1,7 @@
+{
+  "name": "MCP Lab",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "mcp-lab",
+  "workspaceFolder": "/workspace",
+  "shutdownAction": "none"
+}

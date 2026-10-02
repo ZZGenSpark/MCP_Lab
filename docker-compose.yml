@@ -1,0 +1,10 @@
+services:
+  mcp-lab:
+    build: .
+    image: mcp-lab:latest
+    container_name: mcp-lab
+    stdin_open: true
+    tty: true
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
