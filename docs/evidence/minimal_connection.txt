@@ -1,0 +1,6 @@
+$ python poc/minimal_client.py
+server: equipment-poc
+protocol: 2025-11-25
+tools:
+- ping: Return pong so a client can prove the stdio connection.
+call ping -> pong
