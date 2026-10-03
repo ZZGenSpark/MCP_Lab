@@ -25,11 +25,14 @@ def test_defaults() -> None:
     assert cfg.server.command
     assert cfg.server.args == ("-m", "equipment_server")
     assert cfg.llm.base_url == "http://localhost:11434"
-    assert cfg.llm.model == "llama3.2:3b"
+    assert cfg.llm.model == "qwen3:8b"
     assert cfg.llm.temperature == 0.0
+    assert cfg.llm.timeout_seconds == 120
+    assert cfg.llm.think is False
     assert cfg.agent.max_steps == 8
     assert cfg.agent.max_tool_retries == 1
     assert cfg.agent.traces_dir == "host/traces"
+    assert cfg.agent.logs_dir == "logging"
     assert cfg.policy.probation_days == 90
 
 
@@ -49,6 +52,11 @@ def test_env_overrides_each_type() -> None:
     assert cfg.llm.temperature == 0.2
     assert cfg.server.args == ("-m", "equipment_server", "--stdio")
     assert cfg.server.command
+
+
+def test_think_can_be_switched_on_from_the_environment() -> None:
+    assert load_config({"MCPLAB_LLM_THINK": "true"}).llm.think is True
+    assert load_config({"MCPLAB_LLM_THINK": "false"}).llm.think is False
 
 
 def test_invalid_override_is_rejected() -> None:

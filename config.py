@@ -25,10 +25,12 @@ class ServerConfig:
 @dataclass(frozen=True)
 class LLMConfig:
     base_url: str = "http://localhost:11434"
-    model: str = "llama3.2:3b"
+    model: str = "qwen3:8b"
     fallback_model: str = "mistral"
     temperature: float = 0.0
-    timeout_seconds: int = 60
+    timeout_seconds: int = 120
+    # Qwen3 reasons before it answers unless this is False. Thinking stays off.
+    think: bool = False
 
 
 @dataclass(frozen=True)
@@ -36,6 +38,7 @@ class AgentConfig:
     max_steps: int = 8
     max_tool_retries: int = 1
     traces_dir: str = "host/traces"
+    logs_dir: str = "logging"
 
 
 @dataclass(frozen=True)
