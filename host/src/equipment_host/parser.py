@@ -1,17 +1,13 @@
-"""Parse one model reply into an Action, a Final, or Malformed."""
+"""Parse a decision JSON object from a model message that did not call a tool."""
 
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
-from typing import Any
 
-
-@dataclass(frozen=True)
-class Action:
-    name: str
-    arguments: dict[str, Any]
-    thought: str
+_FENCE = re.compile(r"^```(?:json)?\s*|\s*```$", re.IGNORECASE)
+_THINK = re.compile(r"<think>.*?</think>", re.DOTALL | re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -27,67 +23,31 @@ class Malformed:
     message: str
 
 
-def parse_reply(raw: str) -> Action | Final | Malformed:
-    """Accept a Thought plus either Action or Final. Anything else is malformed."""
-    text = raw.strip()
-    thought = _thought(text)
-    action_at = text.find("Action:")
-    final_at = text.find("Final:")
-    if action_at == -1 and final_at == -1:
-        return Malformed("missing Action or Final")
-    if final_at != -1 and (action_at == -1 or final_at < action_at):
-        return _final(text[final_at + len("Final:") :], thought)
-    return _action(text[action_at + len("Action:") :], thought)
-
-
-def _thought(text: str) -> str:
-    marker = "Thought:"
-    start = text.find(marker)
+def parse_decision(raw: str) -> Final | Malformed:
+    """Accept a JSON object with decision, reason_code, and text."""
+    text = _THINK.sub("", raw).strip()
+    text = _FENCE.sub("", text).strip()
+    start = text.find("{")
     if start == -1:
-        return ""
-    rest = text[start + len(marker) :]
-    line = rest.split("\n", 1)[0]
-    return line.strip()
-
-
-def _action(body: str, thought: str) -> Action | Malformed:
-    brace = body.find("{")
-    if brace == -1:
-        return Malformed("Action is missing a JSON object")
-    name = body[:brace].strip()
-    if not name or any(ch.isspace() for ch in name):
-        return Malformed("Action tool name is missing")
+        return Malformed("missing decision JSON")
     try:
-        arguments = json.loads(body[brace:])
+        payload, _end = json.JSONDecoder().raw_decode(text[start:])
     except json.JSONDecodeError:
-        return Malformed("Action JSON is invalid")
-    if not isinstance(arguments, dict):
-        return Malformed("Action JSON must be an object")
-    return Action(name=name, arguments=arguments, thought=thought)
-
-
-def _final(body: str, thought: str) -> Final | Malformed:
-    brace = body.find("{")
-    if brace == -1:
-        return Malformed("Final is missing a JSON object")
-    try:
-        payload = json.loads(body[brace:])
-    except json.JSONDecodeError:
-        return Malformed("Final JSON is invalid")
+        return Malformed("decision JSON is invalid")
     if not isinstance(payload, dict):
-        return Malformed("Final JSON must be an object")
+        return Malformed("decision JSON must be an object")
     decision = payload.get("decision")
     if decision not in {"approve", "deny", "escalate"}:
-        return Malformed("Final decision must be approve, deny, or escalate")
+        return Malformed("decision must be approve, deny, or escalate")
     reason = payload.get("reason_code")
     if reason is not None and not isinstance(reason, str):
         return Malformed("reason_code must be a string or null")
-    text = payload.get("text")
-    if not isinstance(text, str) or not text.strip():
-        return Malformed("Final text must be a non-empty string")
+    body = payload.get("text")
+    if not isinstance(body, str) or not body.strip():
+        return Malformed("decision text must be a non-empty string")
     return Final(
         decision=decision,
         reason_code=reason,
-        text=text.strip(),
-        thought=thought,
+        text=body.strip(),
+        thought=text[:start].strip(),
     )

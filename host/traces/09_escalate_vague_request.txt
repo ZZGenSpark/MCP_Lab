@@ -1,0 +1,19 @@
+Request: Employee E1001 asks for equipment but does not say which item. Reason: Help. Today is 2026-01-01.
+Thought: Call get_employee_info.
+Action: get_employee_info {"employee_id": "E1001"}
+Observation: {"ok": true, "employee_id": "E1001", "role": "standard", "start_date": "2020-01-15", "tenure_days": 2178, "equipment": []}
+Thought: Call check_request_eligibility.
+Action: check_request_eligibility {"employee_id": "E1001", "item": "", "reason": "Help"}
+Observation: {"ok": true, "employee_id": "E1001", "item": null, "eligible": "unclear", "reason_code": "VAGUE_REQUEST", "rule": "the request does not name an item"}
+Thought: Call flag_for_human_review.
+Action: flag_for_human_review {"employee_id": "E1001", "request": "Employee E1001 asks for equipment but does not say which item.", "reason": "VAGUE_REQUEST"}
+Guardrail: ticket reason set to 'VAGUE_REQUEST: the request does not name an item'
+Observation: {"ok": true, "ticket_id": "REV-0005", "status": "pending_review"}
+Thought: Decide from the observations.
+Final: {"decision": "escalate", "reason_code": "VAGUE_REQUEST", "text": "Escalated due to VAGUE_REQUEST. The request does not name an item. Ticket ID: REV-0005."}
+Draft: Escalated due to VAGUE_REQUEST. The request does not name an item. Ticket ID: REV-0005.
+Reflection critique: {"issues": [], "final_text": "Escalated due to VAGUE_REQUEST. The request does not name an item. Ticket ID: REV-0005.", "verdict": "confirmed"}
+Reflection: confirmed issues=[]
+Final: Escalated due to VAGUE_REQUEST. The request does not name an item. Ticket ID: REV-0005.
+Decision: escalate VAGUE_REQUEST
+Outcome: escalate

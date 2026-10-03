@@ -1,19 +1,28 @@
 # Demo decisions
 
 01_approve_monitor: decision=approve reason=- ticket=- reflection=confirmed
-Approved. standard may hold 1 monitor; refresh 3 years; 0 inside the window
+E1001's request for a monitor is approved. They are eligible to hold 1 monitor, and the request is within the refresh window.
 
 02_deny_contractor_laptop: decision=deny reason=ROLE_NOT_ELIGIBLE ticket=- reflection=confirmed
-Contractor E1002 is not eligible to request a laptop.
+E1002 is a contractor and cannot request a laptop.
 
 03_deny_unknown_employee: decision=deny reason=EMPLOYEE_NOT_FOUND ticket=- reflection=confirmed
-Employee with id E9999 does not exist.
+The employee ID E9999 was not found. Please check the ID format or confirm with the requester.
 
 04_deny_unknown_item: decision=deny reason=UNKNOWN_ITEM ticket=- reflection=confirmed
-Denied. That item is not in the catalog. Requestable items: monitor, laptop, keyboard, mouse, dock, headset
+Denied. Unknown item "standing desk". Requestable items: monitor, laptop, keyboard, mouse, dock, headset
 
 05_escalate_borderline_laptop: decision=escalate reason=WITHIN_WINDOW_WITH_REASON ticket=REV-0001 reflection=revised
-Request to replace laptop has been flagged for human review. Please review the request and update the status. No delivery date is confirmed.
+Escalated to human review. Reason code: WITHIN_WINDOW_WITH_REASON. Rule: standard laptop issued 2022-02-06 has 36 days left in the 4-year window. Ticket ID: REV-0001.
 
-06_escalate_new_hire: decision=escalate reason=TENURE_UNDER_90_DAYS ticket=REV-0001 reflection=confirmed
-Escalated (TENURE_UNDER_90_DAYS) as REV-0001. tenure is 89 days, under the 90-day probation
+06_escalate_new_hire: decision=escalate reason=TENURE_UNDER_90_DAYS ticket=REV-0002 reflection=confirmed
+Escalated due to TENURE_UNDER_90_DAYS. The request is pending review with ticket ID REV-0002.
+
+07_escalate_data_conflict: decision=escalate reason=DATA_CONFLICT ticket=REV-0003 reflection=confirmed
+Escalated to human review due to DATA_CONFLICT. Rule: contractor already holds a laptop, which that role cannot have. Ticket ID: REV-0003.
+
+08_escalate_hardware_failure: decision=escalate reason=WITHIN_WINDOW_WITH_REASON ticket=REV-0004 reflection=confirmed
+Escalated to human review. Reason code: WITHIN_WINDOW_WITH_REASON. Rule: standard monitor issued 2024-06-01 has 516 days left in the 3-year window; the reason reports a hardware failure ('broken'). Ticket ID: REV-0004.
+
+09_escalate_vague_request: decision=escalate reason=VAGUE_REQUEST ticket=REV-0005 reflection=confirmed
+Escalated due to VAGUE_REQUEST. The request does not name an item. Ticket ID: REV-0005.

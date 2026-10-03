@@ -1,0 +1,19 @@
+Request: Employee E1006 asks for a monitor. Reason: My monitor is broken. Today is 2026-01-01.
+Thought: Call get_employee_info.
+Action: get_employee_info {"employee_id": "E1006"}
+Observation: {"ok": true, "employee_id": "E1006", "role": "standard", "start_date": "2020-01-15", "tenure_days": 2178, "equipment": [{"item": "monitor", "issued_on": "2024-06-01"}]}
+Thought: Call check_request_eligibility.
+Action: check_request_eligibility {"reason": "My monitor is broken.", "employee_id": "E1006", "item": "monitor"}
+Observation: {"ok": true, "employee_id": "E1006", "item": "monitor", "eligible": "unclear", "reason_code": "WITHIN_WINDOW_WITH_REASON", "rule": "standard monitor issued 2024-06-01 has 516 days left in the 3-year window; the reason reports a hardware failure ('broken')"}
+Thought: Call flag_for_human_review.
+Action: flag_for_human_review {"employee_id": "E1006", "request": "E1006 asks for a monitor.", "reason": "WITHIN_WINDOW_WITH_REASON"}
+Guardrail: ticket reason set to "WITHIN_WINDOW_WITH_REASON: standard monitor issued 2024-06-01 has 516 days left in the 3-year window; the reason reports a hardware failure ('broken')"
+Observation: {"ok": true, "ticket_id": "REV-0004", "status": "pending_review"}
+Thought: Decide from the observations.
+Final: {"decision": "escalate", "reason_code": "WITHIN_WINDOW_WITH_REASON", "text": "Escalated to human review. Reason code: WITHIN_WINDOW_WITH_REASON. Rule: standard monitor issued 2024-06-01 has 516 days left in the 3-year window; the reason reports a hardware failure ('broken'). Ticket ID: REV-0004."}
+Draft: Escalated to human review. Reason code: WITHIN_WINDOW_WITH_REASON. Rule: standard monitor issued 2024-06-01 has 516 days left in the 3-year window; the reason reports a hardware failure ('broken'). Ticket ID: REV-0004.
+Reflection critique: {"issues": [], "final_text": "Escalated to human review. Reason code: WITHIN_WINDOW_WITH_REASON. Rule: standard monitor issued 2024-06-01 has 516 days left in the 3-year window; the reason reports a hardware failure ('broken'). Ticket ID: REV-0004.", "verdict": "confirmed"}
+Reflection: confirmed issues=[]
+Final: Escalated to human review. Reason code: WITHIN_WINDOW_WITH_REASON. Rule: standard monitor issued 2024-06-01 has 516 days left in the 3-year window; the reason reports a hardware failure ('broken'). Ticket ID: REV-0004.
+Decision: escalate WITHIN_WINDOW_WITH_REASON
+Outcome: escalate

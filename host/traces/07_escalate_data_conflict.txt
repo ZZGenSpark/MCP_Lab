@@ -1,0 +1,19 @@
+Request: Contractor E1005 asks for a laptop. Reason: My laptop no longer works. Today is 2026-01-01.
+Thought: Call get_employee_info.
+Action: get_employee_info {"employee_id": "E1005"}
+Observation: {"ok": true, "employee_id": "E1005", "role": "contractor", "start_date": "2021-06-01", "tenure_days": 1675, "equipment": [{"item": "laptop", "issued_on": "2024-01-01"}]}
+Thought: Call check_request_eligibility.
+Action: check_request_eligibility {"employee_id": "E1005", "item": "laptop", "reason": "My laptop no longer works."}
+Observation: {"ok": true, "employee_id": "E1005", "item": "laptop", "eligible": "unclear", "reason_code": "DATA_CONFLICT", "rule": "contractor already holds a laptop, which that role cannot have"}
+Thought: Call flag_for_human_review.
+Action: flag_for_human_review {"employee_id": "E1005", "request": "Contractor E1005 asks for a laptop.", "reason": "DATA_CONFLICT"}
+Guardrail: ticket reason set to 'DATA_CONFLICT: contractor already holds a laptop, which that role cannot have'
+Observation: {"ok": true, "ticket_id": "REV-0003", "status": "pending_review"}
+Thought: Decide from the observations.
+Final: {"decision": "escalate", "reason_code": "DATA_CONFLICT", "text": "Escalated to human review due to DATA_CONFLICT. Rule: contractor already holds a laptop, which that role cannot have. Ticket ID: REV-0003."}
+Draft: Escalated to human review due to DATA_CONFLICT. Rule: contractor already holds a laptop, which that role cannot have. Ticket ID: REV-0003.
+Reflection critique: {"issues": [], "final_text": "Escalated to human review due to DATA_CONFLICT. Rule: contractor already holds a laptop, which that role cannot have. Ticket ID: REV-0003.", "verdict": "confirmed"}
+Reflection: confirmed issues=[]
+Final: Escalated to human review due to DATA_CONFLICT. Rule: contractor already holds a laptop, which that role cannot have. Ticket ID: REV-0003.
+Decision: escalate DATA_CONFLICT
+Outcome: escalate

@@ -143,3 +143,64 @@ def test_escalating_an_unknown_employee_overrides_to_deny() -> None:
     assert result.accepted is False
     assert result.override_decision == "deny"
     assert result.override_reason == "EMPLOYEE_NOT_FOUND"
+
+
+def _error(code: str, message: str, hint: str) -> dict:
+    return {
+        "ok": False,
+        "error": {
+            "code": code,
+            "message": message,
+            "field": "item",
+            "retryable": False,
+            "hint": hint,
+        },
+    }
+
+
+def test_override_text_quotes_the_tool_error_message_and_hint() -> None:
+    evidence = Evidence()
+    evidence.add(
+        "check_request_eligibility",
+        {"employee_id": "E1001", "item": "standing desk"},
+        _error(
+            "UNKNOWN_ITEM",
+            "Unknown item 'standing desk'",
+            "Requestable items: monitor, laptop, keyboard, mouse, dock, headset",
+        ),
+    )
+    result = evaluate("escalate", "VAGUE_REQUEST", evidence, max_tool_retries=RETRIES)
+    assert result.override_decision == "deny"
+    assert result.override_text == (
+        'Denied. Unknown item "standing desk". '
+        "Requestable items: monitor, laptop, keyboard, mouse, dock, headset"
+    )
+
+
+def test_employee_override_text_quotes_the_message() -> None:
+    evidence = Evidence()
+    evidence.add(
+        "get_employee_info",
+        {"employee_id": "E9999"},
+        _error(
+            "EMPLOYEE_NOT_FOUND",
+            "No employee with id E9999",
+            "Check the id format E#### or ask the requester to confirm.",
+        ),
+    )
+    result = evaluate("escalate", "VAGUE_REQUEST", evidence, max_tool_retries=RETRIES)
+    assert result.override_text == (
+        "Denied. No employee with id E9999. "
+        "Check the id format E#### or ask the requester to confirm."
+    )
+
+
+def test_override_text_falls_back_when_the_error_has_no_message() -> None:
+    evidence = Evidence()
+    evidence.add(
+        "get_employee_info",
+        {"employee_id": "E9999"},
+        {"ok": False, "error": {"code": "EMPLOYEE_NOT_FOUND"}},
+    )
+    result = evaluate("escalate", "VAGUE_REQUEST", evidence, max_tool_retries=RETRIES)
+    assert result.override_text == "Denied. No employee matches that id."

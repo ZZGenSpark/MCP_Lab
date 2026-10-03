@@ -233,17 +233,24 @@ def _retryable_exhausted(evidence: Evidence, max_tool_retries: int) -> bool:
 
 
 def _deny_text(code: str, evidence: Evidence) -> str:
-    hint = ""
+    """Denial text that quotes the tool's own error message and hint."""
+    message = hint = ""
     for item in reversed(evidence.observations):
         if _code(item.result) == code:
             error = item.result.get("error", {})
-            hint = str(error.get("hint") or error.get("message") or "")
+            # Double quotes read better in a reply, and the reflection judge
+            # misreads a single-quoted item name as an unsupported claim.
+            message = str(error.get("message") or "").strip().rstrip(".")
+            message = message.replace("'", '"')
+            hint = str(error.get("hint") or "").strip()
             break
-    if code == "EMPLOYEE_NOT_FOUND":
-        return f"Denied. No employee matches that id. {hint}".strip()
-    if code == "UNKNOWN_ITEM":
-        return f"Denied. That item is not in the catalog. {hint}".strip()
-    return f"Denied. The role is not recognized. {hint}".strip()
+    if message:
+        return f"Denied. {message}. {hint}".strip()
+    fallback = {
+        "EMPLOYEE_NOT_FOUND": "No employee matches that id.",
+        "UNKNOWN_ITEM": "That item is not requestable.",
+    }.get(code, "The role is not recognized.")
+    return f"Denied. {fallback} {hint}".strip()
 
 
 def _code(result: dict[str, Any]) -> str | None:
