@@ -4,9 +4,13 @@ from __future__ import annotations
 
 import json
 
+from equipment_host.llm import ChatReply, tool_reply
 
-def action(name: str, arguments: dict, thought: str = "Check the records.") -> str:
-    return f"Thought: {thought}\nAction: {name} {json.dumps(arguments)}"
+
+def action(
+    name: str, arguments: dict, thought: str = "Check the records."
+) -> ChatReply:
+    return tool_reply(name, arguments, thought)
 
 
 def final(
@@ -14,10 +18,15 @@ def final(
     reason: str | None,
     text: str,
     thought: str = "Decide from the observations.",
-) -> str:
+) -> ChatReply:
     body = {"decision": decision, "reason_code": reason, "text": text}
-    return f"Thought: {thought}\nFinal: {json.dumps(body)}"
+    content = json.dumps(body)
+    if thought:
+        content = f"{thought}\n{content}"
+    return ChatReply(content=content)
 
 
-def reflection(text: str, verdict: str = "confirmed") -> str:
-    return json.dumps({"verdict": verdict, "issues": [], "final_text": text})
+def reflection(
+    text: str, verdict: str = "confirmed", issues: list[str] | None = None
+) -> str:
+    return json.dumps({"verdict": verdict, "issues": issues or [], "final_text": text})

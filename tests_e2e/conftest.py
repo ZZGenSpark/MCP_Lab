@@ -7,10 +7,10 @@ import signal
 import subprocess
 from pathlib import Path
 
-from equipment_host.llm import ScriptedLLM
+from equipment_host.llm import ChatReply, ScriptedLLM
 
 
-def scripted(replies: list[str]) -> ScriptedLLM:
+def scripted(replies: list[ChatReply | str]) -> ScriptedLLM:
     return ScriptedLLM(replies)
 
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 
+import pytest
 from equipment_client.session import EquipmentSession
 from equipment_host.react import RunResult, handle_request
 
@@ -17,22 +18,54 @@ DENY_DESK = (
     "A standing desk is not requestable. "
     "Requestable items: monitor, laptop, keyboard, mouse, dock, headset."
 )
-ESCALATE_LAPTOP = "The laptop is inside the refresh window and needs review."
-ESCALATE_HIRE = "The new hire needs manager sign-off before a monitor is issued."
+ESCALATE_LAPTOP = (
+    "Escalated (WITHIN_WINDOW_WITH_REASON) as REV-0001. "
+    "The laptop is inside the refresh window and needs review."
+)
+ESCALATE_HIRE = (
+    "Escalated (TENURE_UNDER_90_DAYS) as REV-0001. "
+    "The new hire needs manager sign-off before a monitor is issued."
+)
+ESCALATE_CONFLICT = (
+    "Escalated (DATA_CONFLICT) as REV-0001. "
+    "The contractor already holds a laptop on file, which that role cannot have."
+)
+ESCALATE_BROKEN = (
+    "Escalated (WITHIN_WINDOW_WITH_REASON) as REV-0001. "
+    "The monitor is inside its window, but the reason reports a hardware failure."
+)
+ESCALATE_VAGUE = (
+    "Escalated (VAGUE_REQUEST) as REV-0001. "
+    "The request does not name an item, so a person needs to follow up."
+)
+DENY_SECOND_SCREEN = "Denied (LIMIT_REACHED). The standard role already has a monitor."
 
 
-def _run(replies: list[str], *, overcommit: bool = False) -> RunResult:
-    return asyncio.run(_open(replies, overcommit=overcommit))
+def _run(
+    replies: list, *, overcommit: bool = False, steps: int | None = None
+) -> RunResult:
+    return asyncio.run(_open(replies, overcommit=overcommit, steps=steps))
 
 
-async def _open(replies: list[str], *, overcommit: bool) -> RunResult:
+async def _open(
+    replies: list, *, overcommit: bool, steps: int | None = None
+) -> RunResult:
     async with EquipmentSession(timeout=5) as session:
         return await handle_request(
             "See the scripted actions.",
             scripted(replies),
             session=session,
             inject_overcommit=overcommit,
+            max_steps=steps,
         )
+
+
+def _ticket_args(result: RunResult) -> dict:
+    """The arguments of the ticket the run opened."""
+    for name, arguments in result.tool_calls:
+        if name == "flag_for_human_review":
+            return arguments
+    raise AssertionError("the run opened no ticket")
 
 
 def test_approve_first_monitor() -> None:
@@ -162,6 +195,201 @@ def test_escalate_new_hire() -> None:
     assert result.ticket_id == "REV-0001"
 
 
+def test_escalate_data_conflict() -> None:
+    reason = "My laptop no longer works."
+    result = _run(
+        [
+            action(
+                "check_request_eligibility",
+                {"employee_id": "E1005", "item": "laptop", "reason": reason},
+            ),
+            action(
+                "flag_for_human_review",
+                {
+                    "employee_id": "E1005",
+                    "request": "Please review E1005's request for a laptop.",
+                    "reason": "DATA_CONFLICT",
+                },
+            ),
+            final("escalate", "DATA_CONFLICT", ESCALATE_CONFLICT),
+            reflection(ESCALATE_CONFLICT),
+        ]
+    )
+    assert result.decision == "escalate"
+    assert result.reason_code == "DATA_CONFLICT"
+    assert result.ticket_id == "REV-0001"
+    assert _ticket_args(result)["reason"].startswith("DATA_CONFLICT: ")
+    assert result.reflection is not None
+    assert result.reflection["verdict"] == "confirmed"
+
+
+def test_escalate_a_reported_hardware_failure() -> None:
+    result = _run(
+        [
+            action(
+                "check_request_eligibility",
+                {
+                    "employee_id": "E1006",
+                    "item": "monitor",
+                    "reason": "My monitor is broken.",
+                },
+            ),
+            action(
+                "flag_for_human_review",
+                {
+                    "employee_id": "E1006",
+                    "request": "Please review E1006's request for a monitor.",
+                    "reason": "WITHIN_WINDOW_WITH_REASON",
+                },
+            ),
+            final("escalate", "WITHIN_WINDOW_WITH_REASON", ESCALATE_BROKEN),
+            reflection(ESCALATE_BROKEN),
+        ]
+    )
+    assert result.decision == "escalate"
+    assert result.reason_code == "WITHIN_WINDOW_WITH_REASON"
+    assert result.ticket_id == "REV-0001"
+    assert "hardware failure" in _ticket_args(result)["reason"]
+
+
+def test_a_second_screen_without_a_failure_is_denied() -> None:
+    result = _run(
+        [
+            action(
+                "check_request_eligibility",
+                {
+                    "employee_id": "E1006",
+                    "item": "monitor",
+                    "reason": "I would like a second screen.",
+                },
+            ),
+            final("deny", "LIMIT_REACHED", DENY_SECOND_SCREEN),
+            reflection(DENY_SECOND_SCREEN),
+        ]
+    )
+    assert result.decision == "deny"
+    assert result.reason_code == "LIMIT_REACHED"
+    assert result.ticket_id is None
+
+
+def test_escalate_a_vague_request_with_no_item() -> None:
+    result = _run(
+        [
+            action(
+                "check_request_eligibility",
+                {"employee_id": "E1001", "item": "", "reason": "Help."},
+            ),
+            action(
+                "flag_for_human_review",
+                {
+                    "employee_id": "E1001",
+                    "request": "E1001 sent a request that names no item.",
+                    "reason": "VAGUE_REQUEST",
+                },
+            ),
+            final("escalate", "VAGUE_REQUEST", ESCALATE_VAGUE),
+            reflection(ESCALATE_VAGUE),
+        ]
+    )
+    assert result.decision == "escalate"
+    assert result.reason_code == "VAGUE_REQUEST"
+    assert result.ticket_id == "REV-0001"
+    assert _ticket_args(result)["reason"] == (
+        "VAGUE_REQUEST: the request does not name an item"
+    )
+
+
+def test_ticket_reason_states_the_code_and_the_rule() -> None:
+    result = _run(
+        [
+            action(
+                "check_request_eligibility",
+                {"employee_id": "E1004", "item": "monitor"},
+            ),
+            action(
+                "flag_for_human_review",
+                {
+                    "employee_id": "E1004",
+                    "request": "Please review a monitor for a new hire.",
+                    "reason": "TENURE_UNDER_90_DAYS",
+                },
+            ),
+            final("escalate", "TENURE_UNDER_90_DAYS", ESCALATE_HIRE),
+            reflection(ESCALATE_HIRE),
+        ]
+    )
+    reason = _ticket_args(result)["reason"]
+    assert reason.startswith("TENURE_UNDER_90_DAYS: ")
+    assert len(reason) > len("TENURE_UNDER_90_DAYS: ")
+    assert "Guardrail: ticket reason set to" in result.trace
+
+
+def test_an_escalation_text_without_ticket_or_reason_is_revised() -> None:
+    thin = "A person needs to look at your request."
+    result = _run(
+        [
+            action(
+                "check_request_eligibility",
+                {"employee_id": "E1004", "item": "monitor"},
+            ),
+            action(
+                "flag_for_human_review",
+                {
+                    "employee_id": "E1004",
+                    "request": "Please review a monitor for a new hire.",
+                    "reason": "TENURE_UNDER_90_DAYS",
+                },
+            ),
+            final("escalate", "TENURE_UNDER_90_DAYS", thin),
+            reflection(
+                (
+                    f"{thin} Escalated for human review as REV-0001 "
+                    "(TENURE_UNDER_90_DAYS)."
+                ),
+                "revised",
+                ["The escalation draft does not state the ticket id."],
+            ),
+        ]
+    )
+    assert result.reflection is not None
+    assert result.reflection["verdict"] == "revised"
+    assert result.text.startswith(thin)
+    assert "REV-0001" in result.text
+    assert "TENURE_UNDER_90_DAYS" in result.text
+
+
+@pytest.mark.parametrize(
+    ("arguments", "code"),
+    [
+        ({"employee_id": "E1003", "item": "laptop"}, "WITHIN_WINDOW_WITH_REASON"),
+        ({"employee_id": "E1004", "item": "monitor"}, "TENURE_UNDER_90_DAYS"),
+        ({"employee_id": "E1005", "item": "laptop"}, "DATA_CONFLICT"),
+        (
+            {
+                "employee_id": "E1006",
+                "item": "monitor",
+                "reason": "My monitor is broken.",
+            },
+            "WITHIN_WINDOW_WITH_REASON",
+        ),
+        ({"employee_id": "E1001", "item": "", "reason": "Help."}, "VAGUE_REQUEST"),
+    ],
+)
+def test_host_opens_an_accepted_ticket_when_the_model_never_does(
+    arguments: dict, code: str
+) -> None:
+    result = _run(
+        [action("check_request_eligibility", arguments), reflection("Escalated.")],
+        steps=1,
+    )
+    assert result.decision == "escalate"
+    assert result.reason_code == code
+    assert result.ticket_id == "REV-0001"
+    assert _ticket_args(result)["reason"].startswith(f"{code}: ")
+    assert result.reflection is not None
+    assert result.reflection["verdict"] == "confirmed"
+
+
 def test_guardrail_overrides_a_bad_approve_and_a_bad_escalation() -> None:
     approved = _run(
         [
@@ -208,7 +436,11 @@ def test_reflection_revises_an_overcommit_and_confirms_a_faithful_draft() -> Non
                 },
             ),
             final("escalate", "WITHIN_WINDOW_WITH_REASON", ESCALATE_LAPTOP),
-            reflection(ESCALATE_LAPTOP),
+            reflection(
+                f"{ESCALATE_LAPTOP} No delivery date is confirmed.",
+                "revised",
+                ["The draft promises a delivery that no observation confirms."],
+            ),
         ],
         overcommit=True,
     )

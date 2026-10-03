@@ -22,13 +22,7 @@ def test_live_approve_and_role_deny() -> None:
             response.read()
     except OSError:
         pytest.skip("Ollama is not running")
-    llm = OllamaLLM(
-        cfg.llm.base_url,
-        cfg.llm.model,
-        temperature=cfg.llm.temperature,
-        timeout=cfg.llm.timeout_seconds,
-        fallback_model=cfg.llm.fallback_model,
-    )
+    llm = OllamaLLM.from_config(cfg.llm)
     approve = asyncio.run(
         handle_request(
             "Employee E1001 is standard and needs a first monitor. None is on file.",
