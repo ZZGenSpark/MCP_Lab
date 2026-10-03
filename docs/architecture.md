@@ -26,6 +26,10 @@ flowchart LR
 
 The client launches the server as a subprocess and speaks MCP over stdio. The host never starts the server itself. Tool names and JSON schemas discovered with `list_tools` are the only contract between the host and the server.
 
+Reflection is a second call to the same model after the ReAct loop has a draft. The model is the judge: it returns `confirmed` or `revised`, the issues it found, and, when it revises, the reply text. The host then drops any date, number, or id in that reply that is not in the tool observations, and records a mismatch when approve, deny, or escalate contradicts `eligible`. Guardrails still decide approve, deny, or escalate before this call.
+
+`run_demo` keeps that subprocess open for every scenario. Tickets are also written to `logging/flags.json`. A new server process, such as a later `run_one`, loads that file, so the duplicate-flag check still sees tickets from the previous request.
+
 ## Dependency rules
 
 An import-boundary test in CI enforces these rules:

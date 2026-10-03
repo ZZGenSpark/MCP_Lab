@@ -14,6 +14,8 @@ This document is the policy source for the IT equipment request system. Later mo
 
 The role used for a decision is the role on the employee record.
 
+`check_request_eligibility(employee_id, item, reason)` takes the requester's own words as `reason`. The argument is optional. When it is omitted the reason is not judged, so the two-argument call from the lab spec still works. An empty `item` means the request names no item.
+
 ## Catalog
 
 Requestable items:
@@ -119,9 +121,11 @@ A person can reasonably say yes. Each case uses one reason code and creates one 
 | `WITHIN_WINDOW_WITH_REASON` | The cap is reached and the window has not elapsed, and the reason is a hardware failure or the held unit is near the boundary. Example: the laptop policy is 4 years, the laptop on file is 3.9 years old, and the reason is that it is slow. |
 | `TENURE_UNDER_90_DAYS` | The employee would otherwise be approved, and `tenure_days < 90`. The new hire needs manager sign-off. |
 | `DATA_CONFLICT` | The record needed for this item cannot be trusted. Either a unit of the requested item has a missing or unparseable `issued_on`, or the employee already holds an item whose max quantity for their role is 0 (a contractor with a laptop on file). |
-| `VAGUE_REQUEST` | The request does not name an item, or the reason is empty or shorter than 10 characters and is not an escalation reason code, so the request cannot be evaluated. |
+| `VAGUE_REQUEST` | The request does not name an item, or the reason is empty or shorter than 10 characters and is not an escalation reason code, so the request cannot be evaluated. A reason that is omitted from the tool call is not judged. When no item is named, the review ticket records the item as `unspecified`. |
 
 Hardware failure is a case-insensitive substring match of the reason against this closed list: `broken`, `break`, `fail`, `failed`, `failure`, `damaged`, `damage`, `dead`, `not working`, `won't turn on`, `will not turn on`. A reason that only says the laptop is slow matches the near-boundary rule when the age qualifies, which is how the 3.9-year laptop escalates.
+
+The match is a plain substring test on purpose, so `deadline` contains `dead`. A false match only sends a request that was inside its window and at its cap to a person. It never turns a denial into an approval. A hardware reason changes nothing on the approve path, the role denial, or the data-conflict path.
 
 Tenure is `(today - start_date).days`. It is 0 on the start date. With `today = 2026-01-01`, a start date of `2025-10-04` is 89 days (still in probation) and `2025-10-03` is 90 days (probation complete).
 
@@ -132,7 +136,7 @@ Apply the first matching row.
 | Order | Condition | Outcome | Reason code | Ticket |
 | --- | --- | --- | --- | --- |
 | 1 | Id is malformed or missing from the directory | Deny | `EMPLOYEE_NOT_FOUND` | no |
-| 2 | No item is named, or the reason is missing, under 10 characters, and not an escalation code | Escalate | `VAGUE_REQUEST` | yes |
+| 2 | No item is named, or the supplied reason is empty or under 10 characters and not an escalation code | Escalate | `VAGUE_REQUEST` | yes |
 | 3 | The named item is outside the catalog | Deny | `UNKNOWN_ITEM` | no |
 | 4 | A unit of that item has no usable `issued_on`, or the employee already holds an item the role's quantity sets to 0 | Escalate | `DATA_CONFLICT` | yes |
 | 5 | The role's max quantity for the item is 0 | Deny | `ROLE_NOT_ELIGIBLE` | no |
@@ -169,7 +173,7 @@ The directory must include at least these fixtures. Ages below use `today = 2026
 | `E1003` | standard | `2019-03-01` | laptop issued `2022-02-06` (36 days before the 4-year anniversary) | Near-boundary laptop is `WITHIN_WINDOW_WITH_REASON`. |
 | `E1004` | standard | `2025-10-04` (89 days) | none | First monitor is `TENURE_UNDER_90_DAYS`. |
 | `E1005` | contractor | `2021-06-01` | laptop issued `2024-01-01` | Laptop on file is `DATA_CONFLICT`. |
-| `E1006` | standard | `2020-01-15` | monitor issued `2024-06-01`, still inside 3 years | A monitor request with no failure reason is `LIMIT_REACHED`. |
+| `E1006` | standard | `2020-01-15` | monitor issued `2024-06-01`, still inside 3 years | A monitor request with no failure reason is `LIMIT_REACHED`. A reason that reports a failure, such as "My monitor is broken.", is `WITHIN_WINDOW_WITH_REASON`. |
 
 An id such as `E9999` is valid in form and absent from the file, so a request with that id is `EMPLOYEE_NOT_FOUND`.
 
@@ -184,6 +188,7 @@ Judged on `2026-01-01` against the fixtures above.
 | `E9999` asks for a monitor. Reason: "Please issue a monitor." | Deny | `EMPLOYEE_NOT_FOUND` |
 | `E1001` asks for a standing desk. Reason: "I need a standing desk." | Deny | `UNKNOWN_ITEM` |
 | `E1006` asks for a monitor. Reason: "I would like a second screen." | Deny | `LIMIT_REACHED` |
+| `E1006` asks for a monitor. Reason: "My monitor is broken." | Escalate | `WITHIN_WINDOW_WITH_REASON` |
 | `E1003` asks for a laptop. Reason: "My laptop is 4 years old and slow." | Escalate | `WITHIN_WINDOW_WITH_REASON` |
 | `E1004` asks for a monitor. Reason: "I need a monitor for my desk." | Escalate | `TENURE_UNDER_90_DAYS` |
 | `E1005` asks for a laptop. Reason: "My laptop no longer works." | Escalate | `DATA_CONFLICT` |
