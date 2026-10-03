@@ -51,6 +51,19 @@ async def _call() -> None:
             )
             assert over_stdio == check_request_eligibility(employee_id, item)
 
+        with_reason = (
+            ("E1006", "monitor", "My monitor is broken."),
+            ("E1006", "monitor", "I would like a second screen."),
+            ("E1001", "", "Help."),
+            ("E1001", "monitor", "need"),
+        )
+        for employee_id, item, reason in with_reason:
+            over_stdio = await session.call_tool(
+                "check_request_eligibility",
+                {"employee_id": employee_id, "item": item, "reason": reason},
+            )
+            assert over_stdio == check_request_eligibility(employee_id, item, reason)
+
         store = FlagStore()
         arguments = {
             "employee_id": "E1001",
@@ -66,3 +79,15 @@ async def _call() -> None:
         )
         assert over_stdio == local
         assert over_stdio["ticket_id"] == "REV-0001"
+
+        vague = {
+            "employee_id": "E1001",
+            "request": "Employee E1001 sent a request that names no item.",
+            "reason": "VAGUE_REQUEST: the request does not name an item",
+        }
+        over_stdio = await session.call_tool("flag_for_human_review", vague)
+        local = flag_for_human_review(
+            vague["employee_id"], vague["request"], vague["reason"], store=store
+        )
+        assert over_stdio == local
+        assert over_stdio["ticket_id"] == "REV-0002"

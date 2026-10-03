@@ -13,6 +13,7 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 import config
+import flowlog
 
 DEFAULT_TIMEOUT_SECONDS = 30.0
 _TRANSPORT_HINT = "Retry the call once. If it fails again, report a system fault."
@@ -122,6 +123,13 @@ class EquipmentSession:
     async def list_tools(self) -> list[dict[str, Any]]:
         """Tool name, description, and input schema from the live server."""
         if self._connect_error is not None:
+            flowlog.record(
+                "client",
+                "list_tools",
+                "MCP session was not opened",
+                ["session failed to start"],
+                [],
+            )
             return []
         session = self._require_session()
         listed = await asyncio.wait_for(session.list_tools(), timeout=self._timeout)
@@ -137,24 +145,67 @@ class EquipmentSession:
                     "input_schema": schema,
                 }
             )
+        flowlog.record(
+            "client",
+            "list_tools",
+            "MCP session initialized",
+            None,
+            [
+                {"name": spec["name"], "description": spec["description"]}
+                for spec in specs
+            ],
+        )
         return specs
 
     async def call_tool(
         self, name: str, arguments: Mapping[str, Any] | None = None
     ) -> dict[str, Any]:
+        sent = {"name": name, "arguments": dict(arguments or {})}
         if self._connect_error is not None:
+            flowlog.record(
+                "client",
+                "call_tool",
+                sent,
+                ["session failed to start"],
+                self._connect_error,
+            )
             return self._connect_error
         session = self._require_session()
+        flowlog.record("client", "call_tool", sent, None, "sent to server over stdio")
         try:
             result = await asyncio.wait_for(
                 session.call_tool(name, dict(arguments or {})),
                 timeout=self._timeout,
             )
         except TimeoutError:
-            return transport_error(f"Tool call {name} timed out")
+            timed_out = transport_error(f"Tool call {name} timed out")
+            flowlog.record(
+                "client",
+                "normalize_tool_result",
+                f"timeout waiting for {name}",
+                ["call exceeded the client timeout"],
+                timed_out,
+            )
+            return timed_out
         except Exception as exc:  # noqa: BLE001
-            return transport_error(f"Tool call {name} failed: {exc}")
-        return normalize_tool_result(result)
+            failed = transport_error(f"Tool call {name} failed: {exc}")
+            flowlog.record(
+                "client",
+                "normalize_tool_result",
+                f"call_tool raised {exc}",
+                ["transport failed before a tool result"],
+                failed,
+            )
+            return failed
+        normalized = normalize_tool_result(result)
+        flowlog.record(
+            "client",
+            "normalize_tool_result",
+            _server_payload(result),
+            _normalize_notes(result, normalized),
+            normalized,
+        )
+        return normalized
 
     def _require_session(self) -> ClientSession:
         if self._session is None:
@@ -172,3 +223,27 @@ class EquipmentSession:
                 self._shutdown_error = str(exc)
         self._session = None
         self._client = None
+
+
+def _server_payload(result: object) -> object:
+    """The dict the server returned, or a short note when it did not."""
+    try:
+        return parse_tool_result(result)
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return "MCP result was not a JSON object"
+
+
+def _normalize_notes(result: object, normalized: dict[str, Any]) -> list[str]:
+    is_error = bool(
+        getattr(result, "is_error", False) or getattr(result, "isError", False)
+    )
+    if normalized.get("ok") is not False:
+        return ["normalize_tool_result -> kept the server JSON object"]
+    code = str(normalized.get("error", {}).get("code") or "")
+    if is_error and code == "TRANSPORT_ERROR":
+        return ["normalize_tool_result -> server marked the call as an error"]
+    if code == "TRANSPORT_ERROR":
+        return [
+            "normalize_tool_result -> replaced a non-JSON result with TRANSPORT_ERROR"
+        ]
+    return [f"normalize_tool_result -> kept tool error {code}"]
