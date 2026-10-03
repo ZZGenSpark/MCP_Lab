@@ -2,6 +2,9 @@
 .cursor/plans/
 .cursor/
 
+# Local architecture diagram (study aid, not part of the submission)
+system-architecture.canvas.tsx
+
 # Local assignment spec (wording kept for agent reference; not part of the submission repo)
 Lab. Build an MCP server that exposes a mock claims system; build an agent that uses it to draft responses and escalate ambiguous cases.md
 
@@ -28,6 +31,8 @@ htmlcov/
 # Runtime output
 host/traces/*.tmp
 *.log
+logging/flags.json
+logging/.current-flow-log
 
 # OS / editors
 .DS_Store
