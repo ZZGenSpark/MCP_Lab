@@ -87,3 +87,68 @@ def test_known_reason_code_is_accepted() -> None:
     )
     assert result["ok"] is True
     assert store.records()[0].reason == "WITHIN_WINDOW_WITH_REASON"
+
+
+NO_ITEM_REQUEST = "Employee E1001 sent a request that names no item."
+VAGUE_REASON = "VAGUE_REQUEST: the request does not name an item"
+
+
+def test_vague_request_ticket_may_name_no_item() -> None:
+    store = FlagStore()
+    result = _flag("E1001", NO_ITEM_REQUEST, VAGUE_REASON, store)
+    assert result == {
+        "ok": True,
+        "ticket_id": "REV-0001",
+        "status": "pending_review",
+    }
+    record = store.records()[0]
+    assert record.item == "unspecified"
+    assert record.reason == VAGUE_REASON
+    assert record.status == "pending_review"
+
+
+def test_bare_vague_code_is_accepted_without_an_item() -> None:
+    store = FlagStore()
+    result = _flag("E1001", NO_ITEM_REQUEST, "VAGUE_REQUEST", store)
+    assert result["ok"] is True
+    assert store.records()[0].item == "unspecified"
+
+
+def test_second_item_less_vague_ticket_is_a_duplicate() -> None:
+    store = FlagStore()
+    _flag("E1001", NO_ITEM_REQUEST, VAGUE_REASON, store)
+    second = _flag("E1001", "Help, I need something.", VAGUE_REASON, store)
+    assert second["ok"] is False
+    assert second["error"]["code"] == "DUPLICATE_FLAG"
+    assert len(store.records()) == 1
+
+
+def test_item_less_request_with_another_reason_is_still_unknown_item() -> None:
+    store = FlagStore()
+    result = _flag("E1001", NO_ITEM_REQUEST, REASON, store)
+    assert result["ok"] is False
+    assert result["error"]["code"] == "UNKNOWN_ITEM"
+    assert store.records() == ()
+
+
+def test_vague_ticket_that_names_an_item_keeps_that_item() -> None:
+    store = FlagStore()
+    result = _flag("E1001", "Please review a monitor.", VAGUE_REASON, store)
+    assert result["ok"] is True
+    assert store.records()[0].item == "monitor"
+
+
+def test_vague_ticket_naming_two_items_is_invalid() -> None:
+    store = FlagStore()
+    result = _flag("E1001", "A monitor and a laptop.", VAGUE_REASON, store)
+    assert result["ok"] is False
+    assert result["error"]["code"] == "INVALID_ARGUMENT"
+    assert store.records() == ()
+
+
+def test_vague_ticket_for_an_unknown_employee_is_refused() -> None:
+    store = FlagStore()
+    result = _flag("E9999", NO_ITEM_REQUEST, VAGUE_REASON, store)
+    assert result["ok"] is False
+    assert result["error"]["code"] == "EMPLOYEE_NOT_FOUND"
+    assert store.records() == ()

@@ -12,6 +12,7 @@ from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 from typing import Any
 
+import flowlog
 from equipment_server.loaders import (
     EMPLOYEE_ID,
     Directory,
@@ -43,6 +44,9 @@ REASON_CODES = frozenset(
 )
 REQUEST_MAX_LENGTH = 500
 REASON_MIN_LENGTH = 10
+# A VAGUE_REQUEST ticket may name no item. It is stored under this item.
+UNSPECIFIED_ITEM = "unspecified"
+VAGUE_REASON_CODE = "VAGUE_REQUEST"
 
 _EMPLOYEE_HINT = "Check the id format E#### or ask the requester to confirm."
 _ID_HINT = "Use an employee id like E1001: uppercase E and four digits."
@@ -105,105 +109,157 @@ def validate_employee_id(
     employee_id: object, directory: Directory
 ) -> Employee | dict[str, Any]:
     if not isinstance(employee_id, str):
-        return tool_error(
-            "INVALID_ARGUMENT",
-            "employee_id must be a string like E1001",
-            "employee_id",
-            hint=_ID_HINT,
+        return _checked(
+            "validate_employee_id",
+            employee_id,
+            tool_error(
+                "INVALID_ARGUMENT",
+                "employee_id must be a string like E1001",
+                "employee_id",
+                hint=_ID_HINT,
+            ),
         )
     normalized = employee_id.strip()
     if EMPLOYEE_ID.fullmatch(normalized) is None:
-        return tool_error(
-            "INVALID_ARGUMENT",
-            f"employee_id {employee_id!r} does not match E####",
-            "employee_id",
-            hint=_ID_HINT,
+        return _checked(
+            "validate_employee_id",
+            employee_id,
+            tool_error(
+                "INVALID_ARGUMENT",
+                f"employee_id {employee_id!r} does not match E####",
+                "employee_id",
+                hint=_ID_HINT,
+            ),
         )
     employee = directory.by_id().get(normalized)
     if employee is None:
-        return tool_error(
-            "EMPLOYEE_NOT_FOUND",
-            f"No employee with id {normalized}",
-            "employee_id",
-            hint=_EMPLOYEE_HINT,
+        return _checked(
+            "validate_employee_id",
+            normalized,
+            tool_error(
+                "EMPLOYEE_NOT_FOUND",
+                f"No employee with id {normalized}",
+                "employee_id",
+                hint=_EMPLOYEE_HINT,
+            ),
         )
+    flowlog.validation(
+        f"validate_employee_id({normalized}) -> pass, "
+        f"role={employee.role}, start_date={employee.start_date}"
+    )
     return employee
 
 
 def validate_role(role: object, roles: Collection[str]) -> str | dict[str, Any]:
     allowed = tuple(roles)
     if not isinstance(role, str) or not role.strip():
-        return tool_error(
-            "INVALID_ARGUMENT",
-            "role must be a non-empty string",
-            "role",
-            hint=_role_hint(allowed),
+        return _checked(
+            "validate_role",
+            role,
+            tool_error(
+                "INVALID_ARGUMENT",
+                "role must be a non-empty string",
+                "role",
+                hint=_role_hint(allowed),
+            ),
         )
     normalized = role.strip().lower()
     if normalized not in {name.lower() for name in allowed}:
-        return tool_error(
-            "UNKNOWN_ROLE",
-            f"Unknown role {normalized!r}",
-            "role",
-            hint=_role_hint(allowed),
+        return _checked(
+            "validate_role",
+            normalized,
+            tool_error(
+                "UNKNOWN_ROLE",
+                f"Unknown role {normalized!r}",
+                "role",
+                hint=_role_hint(allowed),
+            ),
         )
+    flowlog.validation(f"validate_role({normalized!r}) -> pass")
     return normalized
 
 
 def validate_item(item: object, catalog: Sequence[str]) -> str | dict[str, Any]:
     if not isinstance(item, str) or not item.strip():
-        return tool_error(
-            "INVALID_ARGUMENT",
-            "item must be a non-empty string",
-            "item",
-            hint=_catalog_hint(catalog),
+        return _checked(
+            "validate_item",
+            item,
+            tool_error(
+                "INVALID_ARGUMENT",
+                "item must be a non-empty string",
+                "item",
+                hint=_catalog_hint(catalog),
+            ),
         )
     normalized = item.strip().lower()
     if normalized not in {name.lower() for name in catalog}:
-        return tool_error(
-            "UNKNOWN_ITEM",
-            f"Unknown item {normalized!r}",
-            "item",
-            hint=_catalog_hint(catalog),
+        return _checked(
+            "validate_item",
+            normalized,
+            tool_error(
+                "UNKNOWN_ITEM",
+                f"Unknown item {normalized!r}",
+                "item",
+                hint=_catalog_hint(catalog),
+            ),
         )
+    flowlog.validation(f"validate_item({normalized!r}) -> pass")
     return normalized
 
 
 def validate_request_text(request: object) -> str | dict[str, Any]:
     if not isinstance(request, str) or not request.strip():
-        return tool_error(
-            "INVALID_ARGUMENT",
-            "request must be a non-empty string",
-            "request",
-            hint=f"Describe the item in at most {REQUEST_MAX_LENGTH} characters.",
+        return _checked(
+            "validate_request_text",
+            request,
+            tool_error(
+                "INVALID_ARGUMENT",
+                "request must be a non-empty string",
+                "request",
+                hint=f"Describe the item in at most {REQUEST_MAX_LENGTH} characters.",
+            ),
         )
     text = request.strip()
     if len(text) > REQUEST_MAX_LENGTH:
-        return tool_error(
-            "INVALID_ARGUMENT",
-            f"request is longer than {REQUEST_MAX_LENGTH} characters",
-            "request",
-            hint=f"Keep the request within {REQUEST_MAX_LENGTH} characters.",
+        return _checked(
+            "validate_request_text",
+            request,
+            tool_error(
+                "INVALID_ARGUMENT",
+                f"request is longer than {REQUEST_MAX_LENGTH} characters",
+                "request",
+                hint=f"Keep the request within {REQUEST_MAX_LENGTH} characters.",
+            ),
         )
+    flowlog.validation(f"validate_request_text -> pass, {len(text)} characters")
     return text
 
 
 def validate_reason(reason: object) -> str | dict[str, Any]:
     if not isinstance(reason, str) or not reason.strip():
-        return tool_error(
-            "INVALID_ARGUMENT",
-            "reason must be a non-empty string",
-            "reason",
-            hint=_reason_hint(),
+        return _checked(
+            "validate_reason",
+            reason,
+            tool_error(
+                "INVALID_ARGUMENT",
+                "reason must be a non-empty string",
+                "reason",
+                hint=_reason_hint(),
+            ),
         )
     text = reason.strip()
     if text in REASON_CODES or len(text) >= REASON_MIN_LENGTH:
+        flowlog.validation(f"validate_reason({text!r}) -> pass")
         return text
-    return tool_error(
-        "INVALID_ARGUMENT",
-        "reason must be at least 10 characters or a known reason code",
-        "reason",
-        hint=_reason_hint(),
+    return _checked(
+        "validate_reason",
+        text,
+        tool_error(
+            "INVALID_ARGUMENT",
+            "reason must be at least 10 characters or a known reason code",
+            "reason",
+            hint=_reason_hint(),
+        ),
     )
 
 
@@ -211,12 +267,17 @@ def validate_not_duplicate(
     employee_id: str, item: str, store: FlagStore
 ) -> dict[str, Any] | None:
     if store.has_open(employee_id, item):
-        return tool_error(
-            "DUPLICATE_FLAG",
-            f"Open review already exists for {employee_id} {item}",
-            "item",
-            hint="Use the existing ticket instead of flagging the same item again.",
+        return _checked(
+            "validate_not_duplicate",
+            f"{employee_id} {item}",
+            tool_error(
+                "DUPLICATE_FLAG",
+                f"Open review already exists for {employee_id} {item}",
+                "item",
+                hint="Use the existing ticket instead of flagging the same item again.",
+            ),
         )
+    flowlog.validation(f"validate_not_duplicate({employee_id} {item}) -> pass")
     return None
 
 
@@ -245,20 +306,36 @@ def validate_flag_request(
     if isinstance(request_text, dict):
         return request_text
     found = _catalog_items_in(request_text, policies.catalog)
-    if not found:
-        return tool_error(
-            "UNKNOWN_ITEM",
-            "request does not name a catalog item",
-            "request",
-            hint=_catalog_hint(policies.catalog),
+    if not found and _is_vague_reason(reason):
+        found = [UNSPECIFIED_ITEM]
+        flowlog.validation(
+            "validate_flag_request no catalog item -> allowed for "
+            f"{VAGUE_REASON_CODE}, item={UNSPECIFIED_ITEM}"
         )
-    if len(found) > 1:
-        return tool_error(
-            "INVALID_ARGUMENT",
-            "request must name one catalog item",
-            "request",
-            hint=_catalog_hint(policies.catalog),
+    elif not found:
+        return _checked(
+            "validate_flag_request",
+            request_text,
+            tool_error(
+                "UNKNOWN_ITEM",
+                "request does not name a catalog item",
+                "request",
+                hint=_catalog_hint(policies.catalog),
+            ),
         )
+    elif len(found) > 1:
+        return _checked(
+            "validate_flag_request",
+            request_text,
+            tool_error(
+                "INVALID_ARGUMENT",
+                "request must name one catalog item",
+                "request",
+                hint=_catalog_hint(policies.catalog),
+            ),
+        )
+    else:
+        flowlog.validation(f"validate_flag_request catalog item -> {found[0]}")
 
     reason_text = validate_reason(reason)
     if isinstance(reason_text, dict):
@@ -283,6 +360,11 @@ def policy_roles(policies: PolicyData) -> tuple[str, ...]:
     return tuple(seen)
 
 
+def _is_vague_reason(reason: object) -> bool:
+    """True when the ticket reason is the VAGUE_REQUEST code, with or without detail."""
+    return isinstance(reason, str) and reason.strip().startswith(VAGUE_REASON_CODE)
+
+
 def _catalog_items_in(text: str, catalog: Sequence[str]) -> list[str]:
     found: list[str] = []
     for item in catalog:
@@ -301,3 +383,10 @@ def _role_hint(roles: Sequence[str]) -> str:
 
 def _reason_hint() -> str:
     return "Use at least 10 characters, or one of: " + ", ".join(sorted(REASON_CODES))
+
+
+def _checked(name: str, value: object, error: dict[str, Any]) -> dict[str, Any]:
+    """Log a failed check, then return the same tool error."""
+    code = error.get("error", {}).get("code", "ERROR")
+    flowlog.validation(f"{name}({value!r}) -> {code}")
+    return error

@@ -11,7 +11,7 @@ python -m equipment_server
 pytest server/tests -q
 ```
 
-Settings for the rest of the lab are `MCPLAB_*` variables documented in the root README. This server does not read them.
+Settings for the rest of the lab are `MCPLAB_*` variables documented in the root README. This server does not read them. When `EQUIPMENT_FLAG_STORE` is a file path, open review tickets are loaded from that file and saved after each new ticket. Without it, tickets stay in memory for this process only.
 
 ## Imports
 
